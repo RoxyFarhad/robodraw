@@ -4,11 +4,36 @@ import random
 import argparse
 from viam.robot.client import RobotClient
 from viam.rpc.dial import Credentials, DialOptions
+from viam.components.camera import Camera, RawImage
+import PIL.Image as PILImage
+from PIL.Image import Image
 from viam.components.gantry import Gantry
-from robodraw import connect, draw, load_image
+from robodraw import connect, draw 
+import io
+import os
+import sys
 
 def getValue(minVal: float, maxVal: float) -> float:
     return float(minVal + (maxVal - minVal) * random.random())
+
+async def camera_main():
+    robot = await connect()
+    logger = logging.getLogger("mac-camera")
+    
+    camera = Camera.from_robot(robot, "mac-cam")
+    pic = await camera.get_image()
+    image_path = "./output-image.jpg"
+    output_contours = "./output-lines.svg"
+    if isinstance(pic, Image):
+        pic.save(image_path)
+    elif isinstance(pic, RawImage):
+        pic_bytes = pic.data
+        image = PILImage.open(io.BytesIO(pic_bytes))
+        image.save(image_path)
+    
+    await draw(image_path, output_contours)
+    
+    await robot.close()
 
 async def main():
     robot = await connect()
@@ -29,12 +54,13 @@ async def main():
     # Don't forget to close the robot when you're done!
     await robot.close()
 
+# if __name__ == "__main__":
+#     parser = argparse.ArgumentParser(description="Parse the file to sketch on the robot")
+#     parser.add_argument("--path", dest="path")
+#     parser.add_argument("--output", dest="output")    
+#     args = parser.parse_args()
+    
+#     asyncio.run(draw(args.path, args.output))
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Parse the file to sketch on the robot")
-    parser.add_argument("--path", dest="path")
-    
-    args = parser.parse_args()
-    
-    asyncio.run(draw(args.path))
-
-
+    asyncio.run(camera_main())
