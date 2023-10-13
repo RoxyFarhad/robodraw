@@ -1,5 +1,5 @@
 import os
-from svgpathtools import svg2paths, CubicBezier, wsvg
+from svgpathtools import svg2paths, CubicBezier, wsvg, Path, Line
 
 from logging import Logger
 from typing import List
@@ -20,7 +20,7 @@ class DrawWrapper:
         self.logger = logger
 
     def normalize_contours(
-        self, contours: List[List[tuple[float, float]]], rangeX, rangeY
+        self, contours: List[List[tuple[float, float]]],
     ):
         maxX = -math.inf
         maxY = -math.inf
@@ -38,6 +38,7 @@ class DrawWrapper:
                 minY = min(minY, y)
 
         new_contours: List[List[tuple[float, float]]] = []
+        diag_length = math.sqrt((maxX-minX)*(maxX-minX) + (maxY-minY)*(maxY-minY))   
         for line in contours:
             new_line = []
             for coordinate in line:
@@ -45,12 +46,8 @@ class DrawWrapper:
                     raise Error(
                         f"in creating new contours: could not normalize counters, bad coordinate: {line}"
                     )
-                normalized_x = (rangeY - rangeX) * (
-                    (coordinate[0] - minX) / (maxX - minX)
-                ) + rangeX
-                normalized_y = (rangeY - rangeX) * (
-                    (coordinate[1] - minY) / (maxY - minY)
-                ) + rangeX
+                normalized_x = (coordinate[0] - minX) / diag_length
+                normalized_y = (coordinate[1] - minY) / diag_length
                 new_line.append((normalized_x, normalized_y))
 
             new_contours.append(new_line)
@@ -110,7 +107,7 @@ class BezierDrawer:
                 [start[0], start[1]],
                 [control1[0], control1[1]],
                 [control2[0], control2[1]],
-                [control2[0], control2[1]],
+                [end[0], end[1]]
             ]
         )
         cubic_bezier_matrix = np.array(
@@ -119,22 +116,44 @@ class BezierDrawer:
         partial = cubic_bezier_matrix.dot(inputs)
         return lambda t: np.array([t**3, t**2, t, 1]).dot(partial)
 
+    def convert_svg_to_paths(self) -> List[Path]:
+        paths = svg2paths(self.filepath)[0]
+        return paths
+    
+    def convert_paths_to_coordinates(self, paths: List[Path]) -> List[List[tuple[float, float]]]:
+        
+        all_points = []
+        print(paths)
+        for path in paths:
+            segments = []
+            # for each segnment draw the line differently 
+            for line in path:
+                if isinstance(line, Line):
+                    start = [line.start.real, line.start.imag]
+                    # start_robin = [line.start.
+                    end = [line.end.real, line.end.imag]
+                    # start, end = cmath.polar(line.start), cmath.polar(line.end)
+                    segments.append((start, end))
+            all_points.append(segments)
+        return all_points
+    
     async def convert_svg_to_contours(self):
-        paths = svg2paths(self.filepath)
-        wsvg(paths, filename="./output1.svg")
+        paths = svg2paths(self.filepath)[0]
+        print(paths)
+        # wsvg(paths, filename="./output1.svg")
 
         all_points = []
         for path in paths:
             for curve in path:
                 bezier: CubicBezier = curve
-                points = self.calculate_bezier_curve(bezier)
-                all_points.extend(points)
+                # points = self.calculate_bezier_curve(bezier)
+                # all_points.extend(points)
                 # plt.plot([p[0] for p in points], [p[1] for p in points], color='red')
 
-                # curve = cubic_bezier_sample(cmath.polar(bezier.start), cmath.polar(bezier.control1), cmath.polar(bezier.control2), cmath.polar(bezier.end))
-                # n_segments = 100
-                # points = np.array([curve(t) for t in np.linspace(0, 1, n_segments)])
-                # plt.plot(points[:, 0], points[:, 1], '-')
+                curve = self.cubic_bezier_sample(cmath.polar(bezier.start), cmath.polar(bezier.control1), cmath.polar(bezier.control2), cmath.polar(bezier.end))
+                n_segments = 100
+                points = np.array([curve(t) for t in np.linspace(0, 1, n_segments)])
+                plt.plot(points[:, 0], points[:, 1], '-')
 
         plt.plot([p[0] for p in all_points], [p[1] for p in all_points], color="red")
         plt.show()

@@ -8,8 +8,8 @@ from viam.components.camera import Camera, RawImage
 import PIL.Image as PILImage
 from PIL.Image import Image
 from viam.components.gantry import Gantry
-from draw_wrapper import DrawWrapper
-from robodraw import InternalRobot, connect, draw, draw_lines
+from draw_wrapper import BezierDrawer, DrawWrapper
+from robodraw import InternalRobot
 import io
 import os
 import sys
@@ -20,22 +20,28 @@ def getValue(minVal: float, maxVal: float) -> float:
     return float(minVal + (maxVal - minVal) * random.random())
 
 
+# async def main():
+#     logger = logging.getLogger("axidraw")
+#     image_path = "./puppy.jpg"
+#     output_contours = "./output-lines.svg"
+#     drawer = DrawWrapper(
+#         input_path=image_path, output_path=output_contours, logger=logger
+#     )
+#     robot_client = InternalRobot(
+#         drawer=drawer,
+#         logger=logger,
+#         api_key="3xa5lhmnugpf7xvhbjo54dfyakqjcg655wn03ze4yjfl3jga",
+#     )
+#     await robot_client.move_to_home()
+#     await robot_client.draw()
+
 async def main():
-    logger = logging.getLogger("axidraw")
-    image_path = "./puppy.jpg"
-    output_contours = "./output-lines.svg"
-    drawer = DrawWrapper(
-        input_path=image_path, output_path=output_contours, logger=logger
-    )
-    robot_client = InternalRobot(
-        drawer=drawer,
-        logger=logger,
-        api_key="3xa5lhmnugpf7xvhbjo54dfyakqjcg655wn03ze4yjfl3jga",
-    )
-    await robot_client.move_to_home()
-    await robot_client.draw()
-
-
+    svg_image_path = "./rectangle.svg"
+    logger = logging.getLogger("bezier_curve")
+    drawer = BezierDrawer(filepath=svg_image_path, logger=logger)
+    paths = drawer.convert_svg_to_paths()
+    points = drawer.convert_paths_to_coordinates(paths=paths)    
+    print(points)
 # start = await axidraw.get_position()
 
 # minX, maxX, minY, maxY, z = -8, 8, -5.5, 5.5, 0

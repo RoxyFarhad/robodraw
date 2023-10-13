@@ -9,7 +9,7 @@ import io
 import matplotlib.pyplot as plt
 
 from draw_wrapper import DrawWrapper
-from .utils import Error
+from utils import Error
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("robot")
@@ -46,9 +46,9 @@ class InternalRobot:
 
     async def move_to_home(self):
         curr_pos = await self.axidraw.get_position()
-        await self.axidraw.move_to_position([curr_pos[0], curr_pos[1], 5], [])
-        await self.axidraw.move_to_position([0, 0, 5], [])
-        await self.axidraw.move_to_position([0, 0, 0], [])
+        await self.axidraw.move_to_position([curr_pos[0], curr_pos[1], Z_VALUE_MOVING], [])
+        await self.axidraw.move_to_position([0, 0, Z_VALUE_MOVING], [])
+        await self.axidraw.move_to_position([0, 0, Z_VALUE_DRAWING], [])
         logger.info("i am home :)")
 
     async def move_to_next_coord(self, next_coord: tuple[float, float]):
